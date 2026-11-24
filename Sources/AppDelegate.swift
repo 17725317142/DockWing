@@ -34,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        SmoothScrollEngine.shared.stopImmediately()
+        MiddleButtonDragScroller.shared.cancel()
         NotchMissionControlTrigger.shared.cancelPending()
         DockHoverWindowPicker.shared.stop()
         EventTapManager.shared.stop()
@@ -83,31 +85,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        let minItem = NSMenuItem(title: "点图标最小化窗口", action: #selector(toggleMinimize), keyEquivalent: "")
-        minItem.target = self
-        minItem.state = settings.enableDockClickMinimize ? .on : .off
-        menu.addItem(minItem)
+        // Group 1: Dock, Window & Desktop
+        let dockGroup = NSMenuItem(title: "程序坞与窗口", action: nil, keyEquivalent: "")
+        dockGroup.submenu = buildDockWindowSubmenu(settings: settings)
+        menu.addItem(dockGroup)
 
-        let hoverItem = NSMenuItem(title: "悬停多窗口切页", action: #selector(toggleHoverPicker), keyEquivalent: "")
-        hoverItem.target = self
-        hoverItem.state = settings.enableDockHoverWindowPicker ? .on : .off
-        menu.addItem(hoverItem)
-
-        let notchItem = NSMenuItem(title: "刘海 0.15s 切桌面", action: #selector(toggleNotchMissionControl), keyEquivalent: "")
-        notchItem.target = self
-        notchItem.state = settings.enableNotchMissionControl ? .on : .off
-        menu.addItem(notchItem)
-
-        let quitItem = NSMenuItem(title: "关最后窗口退出软件", action: #selector(toggleAutoQuit), keyEquivalent: "")
-        quitItem.target = self
-        quitItem.state = settings.enableLastWindowAutoQuit ? .on : .off
-        menu.addItem(quitItem)
-
-        let cmdWItem = NSMenuItem(title: "按 ⌘W 关末窗也退出", action: #selector(toggleCmdW), keyEquivalent: "")
-        cmdWItem.target = self
-        cmdWItem.state = settings.enableCmdWAutoQuit ? .on : .off
-        cmdWItem.isEnabled = settings.enableLastWindowAutoQuit
-        menu.addItem(cmdWItem)
+        // Group 2: Mouse & Scroll
+        let mouseGroup = NSMenuItem(title: "鼠标与滚轮", action: nil, keyEquivalent: "")
+        mouseGroup.submenu = buildMouseSubmenu(settings: settings)
+        menu.addItem(mouseGroup)
 
         menu.addItem(.separator())
 
@@ -116,11 +102,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         loginItem.state = settings.launchAtLogin ? .on : .off
         menu.addItem(loginItem)
 
-        menu.addItem(.separator())
-
         let exitItem = NSMenuItem(title: "退出 DockWing", action: #selector(quitSelf), keyEquivalent: "q")
         exitItem.target = self
         menu.addItem(exitItem)
+    }
+
+    private func buildDockWindowSubmenu(settings: AppSettings) -> NSMenu {
+        let sub = NSMenu()
+        sub.autoenablesItems = false
+
+        sub.addItem(makeToggle("点图标最小化窗口", on: settings.enableDockClickMinimize, action: #selector(toggleMinimize)))
+        sub.addItem(makeToggle("悬停多窗口切页", on: settings.enableDockHoverWindowPicker, action: #selector(toggleHoverPicker)))
+        sub.addItem(makeToggle("关最后窗口退出软件", on: settings.enableLastWindowAutoQuit, action: #selector(toggleAutoQuit)))
+
+        let cmdW = makeToggle("按 ⌘W 关末窗也退出", on: settings.enableCmdWAutoQuit, action: #selector(toggleCmdW))
+        cmdW.isEnabled = settings.enableLastWindowAutoQuit
+        sub.addItem(cmdW)
+
+        sub.addItem(.separator())
+
+        sub.addItem(makeToggle("台前调度侧栏右键关闭", on: settings.enableStageManagerRightClick, action: #selector(toggleStageManagerMenu)))
+        sub.addItem(makeToggle("刘海 0.1s 切桌面", on: settings.enableNotchMissionControl, action: #selector(toggleNotchMissionControl)))
+        return sub
+    }
+
+    private func buildMouseSubmenu(settings: AppSettings) -> NSMenu {
+        let sub = NSMenu()
+        sub.autoenablesItems = false
+
+        sub.addItem(makeToggle("鼠标滚轮丝滑滚动", on: settings.enableSmoothScroll, action: #selector(toggleSmoothScroll)))
+
+        let speedParent = NSMenuItem(title: "滚动幅度：\(settings.scrollSpeedPreset.title)", action: nil, keyEquivalent: "")
+        speedParent.isEnabled = settings.enableSmoothScroll
+        let speedSub = NSMenu()
+        for preset in ScrollSpeedPreset.allCases {
+            let item = NSMenuItem(title: preset.title, action: #selector(selectScrollSpeed(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = preset.rawValue
+            item.state = (settings.scrollSpeedPreset == preset) ? .on : .off
+            speedSub.addItem(item)
+        }
+        speedParent.submenu = speedSub
+        sub.addItem(speedParent)
+
+        sub.addItem(.separator())
+
+        sub.addItem(makeToggle("⌘ / ⌃ + 滚轮放大缩小", on: settings.enableModifierWheelZoom, action: #selector(toggleWheelZoom)))
+        sub.addItem(makeToggle("长按滚轮中键拖动页面", on: settings.enableMiddleDragScroll, action: #selector(toggleMiddleDragScroll)))
+        return sub
+    }
+
+    private func makeToggle(_ title: String, on: Bool, action: Selector) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        item.state = on ? .on : .off
+        return item
     }
 
     @objc private func openAuth() {
@@ -138,6 +174,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggleNotchMissionControl() {
         AppSettings.shared.enableNotchMissionControl.toggle()
+    }
+
+    @objc private func toggleSmoothScroll() {
+        AppSettings.shared.enableSmoothScroll.toggle()
+        if !AppSettings.shared.enableSmoothScroll {
+            SmoothScrollEngine.shared.stopImmediately()
+        }
+    }
+
+    @objc private func selectScrollSpeed(_ sender: NSMenuItem) {
+        if let preset = ScrollSpeedPreset(rawValue: sender.tag) {
+            AppSettings.shared.scrollSpeedPreset = preset
+        }
+    }
+
+    @objc private func toggleWheelZoom() {
+        AppSettings.shared.enableModifierWheelZoom.toggle()
+    }
+
+    @objc private func toggleMiddleDragScroll() {
+        AppSettings.shared.enableMiddleDragScroll.toggle()
+        if !AppSettings.shared.enableMiddleDragScroll {
+            MiddleButtonDragScroller.shared.cancel()
+        }
+    }
+
+    @objc private func toggleStageManagerMenu() {
+        AppSettings.shared.enableStageManagerRightClick.toggle()
     }
 
     @objc private func toggleAutoQuit() {

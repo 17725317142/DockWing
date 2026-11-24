@@ -9,7 +9,7 @@
     <key>CFBundleExecutable</key>
     <string>DockWing</string>
     <key>CFBundleGetInfoString</key>
-    <string>DockWing 1.0.0 — 轻量 Mac 窗口小助手</string>
+    <string>DockWing 1.1.0 — 轻量 Mac 窗口与鼠标小助手</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
@@ -21,9 +21,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.1.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>

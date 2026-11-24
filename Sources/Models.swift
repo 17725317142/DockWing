@@ -1,6 +1,28 @@
 import Darwin
 import Foundation
 
+enum ScrollSpeedPreset: Int, CaseIterable {
+    case gentle = 0
+    case standard = 1
+    case fast = 2
+
+    var title: String {
+        switch self {
+        case .gentle: return "偏慢（精准）"
+        case .standard: return "标准（推荐）"
+        case .fast: return "偏快（长页面）"
+        }
+    }
+
+    var basePixelsPerNotch: Double {
+        switch self {
+        case .gentle: return 36.0
+        case .standard: return 52.0
+        case .fast: return 74.0
+        }
+    }
+}
+
 final class AppSettings {
     static let shared = AppSettings()
 
@@ -27,6 +49,11 @@ final class AppSettings {
         static let enableCmdWAutoQuit = "enableCmdWAutoQuit"
         static let enableDockHoverWindowPicker = "enableDockHoverWindowPicker"
         static let enableNotchMissionControl = "enableNotchMissionControl"
+        static let enableSmoothScroll = "enableSmoothScroll"
+        static let scrollSpeedPreset = "scrollSpeedPreset"
+        static let enableModifierWheelZoom = "enableModifierWheelZoom"
+        static let enableStageManagerRightClick = "enableStageManagerRightClick"
+        static let enableMiddleDragScroll = "enableMiddleDragScroll"
     }
 
     var enableDockClickMinimize: Bool {
@@ -55,6 +82,26 @@ final class AppSettings {
         }
     }
 
+    var enableSmoothScroll: Bool {
+        didSet { defaults.set(enableSmoothScroll, forKey: Keys.enableSmoothScroll) }
+    }
+
+    var scrollSpeedPreset: ScrollSpeedPreset {
+        didSet { defaults.set(scrollSpeedPreset.rawValue, forKey: Keys.scrollSpeedPreset) }
+    }
+
+    var enableModifierWheelZoom: Bool {
+        didSet { defaults.set(enableModifierWheelZoom, forKey: Keys.enableModifierWheelZoom) }
+    }
+
+    var enableStageManagerRightClick: Bool {
+        didSet { defaults.set(enableStageManagerRightClick, forKey: Keys.enableStageManagerRightClick) }
+    }
+
+    var enableMiddleDragScroll: Bool {
+        didSet { defaults.set(enableMiddleDragScroll, forKey: Keys.enableMiddleDragScroll) }
+    }
+
     var launchAtLogin: Bool {
         DockManager.isLaunchAgentInstalled()
     }
@@ -65,6 +112,12 @@ final class AppSettings {
         self.enableCmdWAutoQuit = defaults.object(forKey: Keys.enableCmdWAutoQuit) as? Bool ?? false
         self.enableDockHoverWindowPicker = defaults.object(forKey: Keys.enableDockHoverWindowPicker) as? Bool ?? true
         self.enableNotchMissionControl = defaults.object(forKey: Keys.enableNotchMissionControl) as? Bool ?? true
+        self.enableSmoothScroll = defaults.object(forKey: Keys.enableSmoothScroll) as? Bool ?? true
+        let rawSpeed = defaults.object(forKey: Keys.scrollSpeedPreset) as? Int ?? ScrollSpeedPreset.standard.rawValue
+        self.scrollSpeedPreset = ScrollSpeedPreset(rawValue: rawSpeed) ?? .standard
+        self.enableModifierWheelZoom = defaults.object(forKey: Keys.enableModifierWheelZoom) as? Bool ?? true
+        self.enableStageManagerRightClick = defaults.object(forKey: Keys.enableStageManagerRightClick) as? Bool ?? true
+        self.enableMiddleDragScroll = defaults.object(forKey: Keys.enableMiddleDragScroll) as? Bool ?? true
     }
 
     func isSystemProtected(_ bundleID: String) -> Bool {

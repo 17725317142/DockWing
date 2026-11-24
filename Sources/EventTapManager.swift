@@ -61,7 +61,13 @@ final class EventTapManager {
         let mask: CGEventMask =
             (1 << CGEventType.leftMouseDown.rawValue) |
             (1 << CGEventType.leftMouseUp.rawValue) |
-            (1 << CGEventType.keyDown.rawValue)
+            (1 << CGEventType.rightMouseDown.rawValue) |
+            (1 << CGEventType.rightMouseUp.rawValue) |
+            (1 << CGEventType.otherMouseDown.rawValue) |
+            (1 << CGEventType.otherMouseDragged.rawValue) |
+            (1 << CGEventType.otherMouseUp.rawValue) |
+            (1 << CGEventType.keyDown.rawValue) |
+            (1 << CGEventType.scrollWheel.rawValue)
 
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         guard let tap = CGEvent.tapCreate(
@@ -119,7 +125,33 @@ final class EventTapManager {
         }
 
         switch type {
+        case .scrollWheel:
+            if SmoothScrollEngine.shared.handleScrollWheelEvent(event) {
+                return nil
+            }
+            return Unmanaged.passUnretained(event)
+
+        case .otherMouseDown, .otherMouseDragged, .otherMouseUp:
+            if MiddleButtonDragScroller.shared.handleOtherMouseEvent(type: type, event: event) {
+                return nil
+            }
+            return Unmanaged.passUnretained(event)
+
+        case .rightMouseDown:
+            SmoothScrollEngine.shared.stopImmediately()
+            if StageManagerContextMenu.shared.handleRightMouseDown(at: event.location) {
+                return nil
+            }
+            return Unmanaged.passUnretained(event)
+
+        case .rightMouseUp:
+            if StageManagerContextMenu.shared.handleRightMouseUp() {
+                return nil
+            }
+            return Unmanaged.passUnretained(event)
+
         case .leftMouseDown:
+            SmoothScrollEngine.shared.stopImmediately()
             let point = event.location
             // Never interfere with clicks landing inside our own hover picker panel
             if DockHoverWindowPicker.shared.isPanelVisibleAndContains(cgPoint: point) {
@@ -142,9 +174,13 @@ final class EventTapManager {
             return Unmanaged.passUnretained(event)
 
         case .keyDown:
+            if event.getIntegerValueField(.eventSourceUserData) == SmoothScrollEngine.syntheticEventTag {
+                return Unmanaged.passUnretained(event)
+            }
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            if keyCode == 53 { // Escape dismisses open hover window picker cleanly
+            if keyCode == 53 { // Escape dismisses open hover window picker and cancels middle-drag cleanly
                 DockHoverWindowPicker.shared.hideIfVisible()
+                MiddleButtonDragScroller.shared.cancel()
             } else if keyCode == 13 && AppSettings.shared.enableCmdWAutoQuit && AppSettings.shared.enableLastWindowAutoQuit {
                 let mods = event.flags.intersection([.maskCommand, .maskShift, .maskAlternate, .maskControl])
                 if mods == .maskCommand {
@@ -183,6 +219,8 @@ final class EventTapManager {
         ) { _ in
             DockHoverWindowPicker.shared.hideNow()
             NotchMissionControlTrigger.shared.cancelPending()
+            SmoothScrollEngine.shared.stopImmediately()
+            MiddleButtonDragScroller.shared.cancel()
         }
         workspaceObservers.append(sleepObs)
 
@@ -192,6 +230,8 @@ final class EventTapManager {
             queue: .main
         ) { _ in
             DockHoverWindowPicker.shared.hideNow()
+            SmoothScrollEngine.shared.stopImmediately()
+            MiddleButtonDragScroller.shared.cancel()
         }
         workspaceObservers.append(spaceObs)
 
@@ -221,6 +261,7 @@ final class EventTapManager {
         DockHoverWindowPicker.shared.hideNow()
         NotchMissionControlTrigger.shared.cancelPending()
         NotchMissionControlTrigger.shared.refreshNotchGeometry()
+        SmoothScrollEngine.shared.refreshDisplayRate()
         ensureTapRunning()
     }
 

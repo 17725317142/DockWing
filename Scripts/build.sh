@@ -29,6 +29,9 @@ swiftc \
   "$PROJECT_DIR/Sources/DockClickMinimizer.swift" \
   "$PROJECT_DIR/Sources/DockHoverWindowPicker.swift" \
   "$PROJECT_DIR/Sources/NotchMissionControlTrigger.swift" \
+  "$PROJECT_DIR/Sources/SmoothScrollEngine.swift" \
+  "$PROJECT_DIR/Sources/MiddleButtonDragScroller.swift" \
+  "$PROJECT_DIR/Sources/StageManagerContextMenu.swift" \
   "$PROJECT_DIR/Sources/LastWindowAutoQuitter.swift" \
   "$PROJECT_DIR/Sources/EventTapManager.swift" \
   "$PROJECT_DIR/Sources/AppDelegate.swift" \

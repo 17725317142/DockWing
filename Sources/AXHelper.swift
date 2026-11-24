@@ -492,6 +492,11 @@ enum AXHelper {
         PrivateWindowSPI.triggerMissionControl()
     }
 
+    /// Expose CGWindowID lookup for matching Stage Manager AXWindowsIDs to concrete AXUIElement windows.
+    static func windowID(for element: AXUIElement) -> CGWindowID? {
+        PrivateWindowSPI.windowID(for: element)
+    }
+
     /// Gracefully close one specific window via its native AXCloseButton.
     static func closeWindow(_ window: AXUIElement) -> Bool {
         var btnRef: CFTypeRef?

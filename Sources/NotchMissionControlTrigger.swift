@@ -8,7 +8,7 @@ import Foundation
 final class NotchMissionControlTrigger {
     static let shared = NotchMissionControlTrigger()
 
-    private let dwellDuration: TimeInterval = 0.15
+    private let dwellDuration: TimeInterval = 0.1
     private let cooldownDuration: TimeInterval = 0.8
 
     private var cachedNotchRects: [CGRect] = []
